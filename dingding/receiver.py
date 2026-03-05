@@ -13,18 +13,18 @@ from typing import Callable, Optional, Awaitable
 from threading import Thread
 
 # 配置基础日志
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
+
 
 class DingDingRequestHandler(BaseHTTPRequestHandler):
     """处理钉钉回调请求的 HTTP 处理器"""
 
     token: str = ""
-    callback: Optional[Callable[[dict], Awaitable[None]]] = None
     message_queue: Optional[asyncio.Queue] = None
+
+    # 使用类变量存储回调，但通过实例访问时避免绑定
+    _callback: Optional[Callable[[dict], Awaitable[None]]] = None
 
     def log_message(self, format, *args):
         """自定义日志格式"""
@@ -34,15 +34,17 @@ class DingDingRequestHandler(BaseHTTPRequestHandler):
         """处理 POST 请求"""
         # 验证 token（从请求头中获取）
         request_token = self.headers.get("token", "")
-        
+
         if request_token != self.token:
-            logger.warning(f"❌ Token 验证失败 | 请求：'{request_token}' | 期望：'{self.token}'")
+            logger.warning(
+                f"❌ Token 验证失败 | 请求：'{request_token}' | 期望：'{self.token}'"
+            )
             self.send_response(401)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps({"error": "Unauthorized"}).encode("utf-8"))
             return
-        
+
         logger.info("✅ Token 验证通过")
 
         # 读取请求体
@@ -57,12 +59,18 @@ class DingDingRequestHandler(BaseHTTPRequestHandler):
             if self.message_queue:
                 self.message_queue.put_nowait(data)
 
-            # 异步调用回调函数
-            if self.callback:
+            # 异步调用回调函数（使用 DingDingRequestHandler._callback 避免方法绑定）
+            if DingDingRequestHandler._callback:
+                import inspect
+
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
-                    loop.run_until_complete(self.callback(data))
+                    # 检查是否是协程函数
+                    if inspect.iscoroutinefunction(DingDingRequestHandler._callback):
+                        loop.run_until_complete(DingDingRequestHandler._callback(data))
+                    else:
+                        DingDingRequestHandler._callback(data)
                 finally:
                     loop.close()
 
@@ -105,7 +113,7 @@ class DingDingReceiver:
         :param callback: 异步回调函数，接收消息数据字典
         """
         self.callback = callback
-        DingDingRequestHandler.callback = callback
+        DingDingRequestHandler._callback = callback
 
     def start(self):
         """启动 HTTP 服务器（非阻塞）"""
