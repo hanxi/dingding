@@ -3,7 +3,7 @@ name = "dingding"
 version = "0.1.0"
 description = "钉钉机器人库 - 支持异步消息推送和接收"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "aiohttp>=3.9.0",
 ]
