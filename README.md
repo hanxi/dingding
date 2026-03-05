@@ -70,11 +70,11 @@ async def handle_message(message: dict):
     print(f"收到消息：{message}")
 
 async def main():
-    # 创建接收器
+    # 创建接收器（token 是钉钉回调时携带的 token）
     receiver = DingDingReceiver(
         host='0.0.0.0',
         port=8080,
-        token='your_token'
+        token='你的 token'
     )
     
     # 设置回调
@@ -170,8 +170,9 @@ async def receive_message(timeout: float = 60.0) -> dict
 ### 消息接收配置
 
 1. 在钉钉机器人配置中设置回调地址
-2. 设置 token 用于验证请求（通过 `X-DingTalk-Token` 头部传递）
+2. 设置 token 用于验证请求
 3. 确保服务器可公网访问
+4. 钉钉回调时会在请求头中携带 `token` 字段
 
 ## 开发
 

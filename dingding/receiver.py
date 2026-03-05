@@ -1,6 +1,8 @@
 """
 钉钉机器人异步消息接收模块
 使用 asyncio 和 http.server 实现异步 HTTP 服务器
+
+验证方式：简单比较 token 是否相等
 """
 
 import asyncio
@@ -10,12 +12,12 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Callable, Optional, Awaitable
 from threading import Thread
 
-from .utils import verify_token
-
 # 配置基础日志
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s: %(message)s"
+)
 logger = logging.getLogger(__name__)
-
 
 class DingDingRequestHandler(BaseHTTPRequestHandler):
     """处理钉钉回调请求的 HTTP 处理器"""
@@ -30,15 +32,18 @@ class DingDingRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """处理 POST 请求"""
-        # 验证 token
-        request_token = self.headers.get("X-DingTalk-Token", "")
-        if not verify_token(request_token, self.token):
-            logger.warning("❌ Token 验证失败")
+        # 验证 token（从请求头中获取）
+        request_token = self.headers.get("token", "")
+        
+        if request_token != self.token:
+            logger.warning(f"❌ Token 验证失败 | 请求：'{request_token}' | 期望：'{self.token}'")
             self.send_response(401)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps({"error": "Unauthorized"}).encode("utf-8"))
             return
+        
+        logger.info("✅ Token 验证通过")
 
         # 读取请求体
         content_length = int(self.headers.get("Content-Length", 0))

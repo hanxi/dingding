@@ -36,8 +36,8 @@ async def main():
     # ========== 消息接收示例 ==========
     print("\n=== 消息接收示例 ===")
 
-    # 创建接收器
-    receiver = DingDingReceiver(host="0.0.0.0", port=8080, token="your_token")
+    # 创建接收器（token 是钉钉回调时携带的 token）
+    receiver = DingDingReceiver(host="0.0.0.0", port=8080, token="Abc")
 
     # 设置消息处理回调
     receiver.set_callback(handle_message)
